@@ -20,6 +20,7 @@ package org.apache.olingo.server.core;
 
 import java.util.Locale;
 
+import jakarta.validation.ConstraintViolationException;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.ODataLibraryException;
@@ -32,6 +33,7 @@ import org.apache.olingo.server.core.uri.parser.UriParserException;
 import org.apache.olingo.server.core.uri.parser.UriParserSemanticException;
 import org.apache.olingo.server.core.uri.parser.UriParserSyntaxException;
 import org.apache.olingo.server.core.uri.validator.UriValidationException;
+
 
 public class ODataExceptionHelper {
 
@@ -146,7 +148,7 @@ public class ODataExceptionHelper {
     serverError.setStatusCode(e.getStatusCode());
     serverError.setLocale(e.getLocale());
     serverError.setCode(e.getODataErrorCode());
-    serverError.setMessage(e.getLocalizedMessage());
+    // serverError.setMessage(e.getLocalizedMessage());
     return serverError;
   }
 
@@ -158,7 +160,12 @@ public class ODataExceptionHelper {
   }
 
   private static ODataServerError basicServerError(final Exception e) {
-    ODataServerError serverError = new ODataServerError().setException(e).setMessage(e.getMessage());
+    StringBuilder message = new StringBuilder(e.getMessage());
+    if (e.getCause() instanceof ConstraintViolationException) {
+      ((ConstraintViolationException) e.getCause()).getConstraintViolations()
+          .stream().forEach(constraintViolation -> message.append(constraintViolation.getMessage()));
+    }
+    ODataServerError serverError = new ODataServerError().setException(e).setMessage(message.toString());
     if (serverError.getMessage() == null) {
       serverError.setMessage("OData Library: An exception without message text was thrown.");
     }
